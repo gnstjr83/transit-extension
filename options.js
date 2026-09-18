@@ -3,18 +3,6 @@ const list = document.getElementById("task-list");
 const keyForm = document.getElementById("key-form");
 const apiKeyInput = document.getElementById("apiKey");
 
-// --- 화면 배율: 컴퓨터(화면 해상도)마다 다르게 편한 크기로 고정 — 기기별이라 local, sync 대상 아님 ---
-const uiScaleSelect = document.getElementById("ui-scale");
-chrome.storage.local.get({ uiScale: 100 }, ({ uiScale }) => {
-  uiScaleSelect.value = uiScale;
-  document.body.style.zoom = `${uiScale}%`;
-});
-uiScaleSelect.addEventListener("change", () => {
-  const uiScale = Number(uiScaleSelect.value);
-  document.body.style.zoom = `${uiScale}%`;
-  chrome.storage.local.set({ uiScale });
-});
-
 // 저장 버튼 누르면 잠깐 "저장됨"으로 바뀌면서 통통 튀는 모션
 function flashSaved(btn) {
   const original = btn.textContent;
@@ -123,9 +111,13 @@ document.getElementById("clear-retro").addEventListener("click", () => {
 renderRetroStats();
 
 // --- 창 크기: 처음엔 컴팩트(시간표만), 확대 누르면 절반 화면으로 ---
-const COMPACT_SIZE = { width: 380, height: 560 };
+// 컴팩트 크기는 화면 해상도마다 편한 값이 달라서 이 컴퓨터(local)에 저장해두고 불러옴.
+let COMPACT_SIZE = { width: 380, height: 560 };
 const EXPANDED_SIZE = { width: Math.round(screen.availWidth / 2), height: Math.round(screen.availHeight * 0.75) };
 const toggleBtn = document.getElementById("toggle-size");
+const compactWidthInput = document.getElementById("compactWidth");
+const compactHeightInput = document.getElementById("compactHeight");
+const windowSizeSubmitBtn = document.getElementById("window-size-submit");
 let expanded = false;
 
 function resizeWindowTo({ width, height }) {
@@ -145,16 +137,33 @@ function setExpanded(next) {
 
 toggleBtn.addEventListener("click", () => setExpanded(!expanded));
 
-// 크롬이 마지막 창 크기/위치를 기억했다가 그걸로 열어버리는 걸 막기 위해,
-// 열릴 때마다 무조건 컴팩트 크기로 강제로 맞춤 (작업표시줄/시작프로그램 등 경로 무관).
-resizeWindowTo(COMPACT_SIZE);
+document.getElementById("window-size-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  COMPACT_SIZE = { width: Number(compactWidthInput.value), height: Number(compactHeightInput.value) };
+  chrome.storage.local.set(
+    { compactWidth: COMPACT_SIZE.width, compactHeight: COMPACT_SIZE.height },
+    () => {
+      flashSaved(windowSizeSubmitBtn);
+      if (!expanded) resizeWindowTo(COMPACT_SIZE);
+    }
+  );
+});
 
-// 첫 실행 추정(API 키 없음): 확대 + 튜토리얼 자동으로 보여줌
-chrome.storage.local.get({ apiKey: "" }, ({ apiKey }) => {
-  if (!apiKey) {
-    setExpanded(true);
-    showGuide();
-  }
+// 저장된 컴팩트 크기를 불러온 다음에야 초기 리사이즈/첫실행 판단을 진행함
+// (크롬이 마지막 창 크기/위치를 기억했다가 그걸로 열어버리는 걸 막으려고, 열릴 때마다 강제로 맞춤).
+chrome.storage.local.get({ compactWidth: 380, compactHeight: 560 }, ({ compactWidth, compactHeight }) => {
+  COMPACT_SIZE = { width: compactWidth, height: compactHeight };
+  compactWidthInput.value = compactWidth;
+  compactHeightInput.value = compactHeight;
+  resizeWindowTo(COMPACT_SIZE);
+
+  // 첫 실행 추정(API 키 없음): 확대 + 튜토리얼 자동으로 보여줌
+  chrome.storage.local.get({ apiKey: "" }, ({ apiKey }) => {
+    if (!apiKey) {
+      setExpanded(true);
+      showGuide();
+    }
+  });
 });
 
 // --- 오늘/내일 타임라인 ---

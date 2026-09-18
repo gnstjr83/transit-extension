@@ -32,7 +32,8 @@
     /* 컴팩트 모드: 시간표만 보이고 나머지는 숨김 */
     body.compact h1, body.compact .subtitle, body.compact .col-tasks,
     body.compact #task-list-card, body.compact #settings-card, body.compact #sites-card,
-    body.compact details, body.compact #guide-card, body.compact #toggle-guide {
+    body.compact #window-size-card, body.compact details, body.compact #guide-card,
+    body.compact #toggle-guide {
       display: none;
     }
     .badge {
@@ -187,14 +188,6 @@
   <div class="topbar">
     <div class="badge">🔍 CASE: TRANSIT</div>
     <div>
-      <select id="ui-scale" class="btn-ghost" style="cursor:pointer;">
-        <option value="80">80%</option>
-        <option value="90">90%</option>
-        <option value="100" selected>100%</option>
-        <option value="110">110%</option>
-        <option value="125">125%</option>
-        <option value="150">150%</option>
-      </select>
       <button id="toggle-guide" class="btn-ghost">도움말</button>
       <button id="toggle-size" class="btn-ghost">확대</button>
     </div>
@@ -315,6 +308,15 @@
         <button type="submit" class="btn-primary" style="margin-top:0; white-space:nowrap;">추가</button>
       </form>
     </div>
+  </div>
+
+  <div id="window-size-card" class="card">
+    <h2>창 크기 (이 컴퓨터에서만)</h2>
+    <form id="window-size-form" style="display:flex; align-items:flex-end; gap:20px; flex-wrap:wrap;">
+      <label>가로(px) <input type="number" id="compactWidth" required min="280" step="10" /></label>
+      <label>세로(px) <input type="number" id="compactHeight" required min="300" step="10" /></label>
+      <button type="submit" id="window-size-submit" class="btn-primary">저장</button>
+    </form>
   </div>
 
   <details>
