@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>Transit 설정</title>
+  <style>
+    :root { --accent: #14B8A6; --accent-bg: #F0FDFA; --ink: #1f2937; --muted: #6b7280; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+      background: #F8FAFC; color: var(--ink);
+      margin: 0; padding: 24px 16px 60px;
+    }
+    .layout { display: flex; gap: 20px; align-items: flex-start; }
+    .col-timeline { flex: 1.4; }
+    .col-tasks { flex: 1; min-width: 0; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; }
+
+    /* 컴팩트 모드: 시간표만 보이고 나머지는 숨김 */
+    body.compact h1, body.compact .subtitle, body.compact .col-tasks,
+    body.compact #task-list-card, body.compact details, body.compact #guide-card,
+    body.compact #toggle-guide {
+      display: none;
+    }
+    .badge {
+      display: inline-block; font-size: 13px; font-weight: 600;
+      color: var(--accent); background: var(--accent-bg);
+      padding: 4px 10px; border-radius: 999px; margin-bottom: 8px;
+    }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    .subtitle { color: var(--muted); font-size: 14px; margin: 0 0 28px; }
+    .card {
+      background: #fff; border-radius: 16px; padding: 22px;
+      box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+      margin-bottom: 20px;
+    }
+    .card h2 { font-size: 15px; margin: 0 0 16px; color: var(--ink); }
+    label { display: block; margin-top: 14px; font-size: 13px; color: var(--muted); }
+    label:first-child { margin-top: 0; }
+    input[type="text"], input[type="password"], input[type="number"], input[type="datetime-local"], textarea {
+      width: 100%; padding: 10px 12px; margin-top: 4px; box-sizing: border-box;
+      border: 1px solid #E2E8F0; border-radius: 10px; font-size: 14px;
+      background: #F8FAFC; color: var(--ink);
+      font-family: inherit;
+    }
+    textarea { resize: vertical; }
+    input:focus, textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    button {
+      border: none; border-radius: 999px; cursor: pointer; font-weight: 600;
+      transition: opacity .15s;
+    }
+    button:hover { opacity: 0.85; }
+    .btn-primary {
+      margin-top: 16px; padding: 10px 20px; font-size: 14px;
+      background: var(--accent); color: #fff;
+    }
+    .btn-ghost {
+      padding: 6px 12px; font-size: 13px; background: transparent; color: var(--muted);
+    }
+    #task-list, #task-list-past { list-style: none; padding: 0; margin: 0; }
+    #task-list li, #task-list-past li {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 0; border-bottom: 1px solid #F1F5F9;
+    }
+    #task-list li:last-child, #task-list-past li:last-child { border-bottom: none; }
+    #past-details { color: var(--muted); font-size: 13px; }
+    #past-details summary { cursor: pointer; display: inline; }
+    #past-details #clear-past { float: right; margin-top: -4px; }
+    .task-main { font-size: 14px; }
+    .task-main .title { font-weight: 600; }
+    .task-main .meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+    .stat-rate { font-size: 32px; font-weight: 700; color: var(--ink); }
+    .stat-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    #retro-list { list-style: none; padding: 0; margin: 16px 0 0; }
+    #retro-list li {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0; border-top: 1px solid #F1F5F9; font-size: 13px;
+    }
+    .retro-yes { color: var(--accent); font-weight: 700; }
+    .retro-no { color: #F43F5E; font-weight: 700; }
+    details { color: var(--muted); font-size: 13px; }
+    details summary { cursor: pointer; margin-bottom: 8px; }
+    details .card { box-shadow: none; border: 1px dashed #E2E8F0; }
+
+    #timeline-scroll { max-height: calc(100vh - 130px); overflow-y: auto; }
+    .tl-day-label {
+      font-size: 12px; font-weight: 700; color: var(--muted);
+      margin: 16px 0 8px; text-transform: uppercase; letter-spacing: 0.02em;
+    }
+    .tl-day-label:first-child { margin-top: 0; }
+    .tl-wrap { position: relative; display: flex; }
+    .tl-hours {
+      width: 44px; flex-shrink: 0; position: relative;
+      font-size: 11px; color: var(--muted);
+    }
+    .tl-hours span { position: absolute; transform: translateY(-50%); }
+    .tl-track {
+      flex: 1; position: relative; border-left: 1px solid #F1F5F9;
+      background-image: repeating-linear-gradient(to bottom, #F1F5F9 0, #F1F5F9 1px, transparent 1px, transparent 60px);
+      cursor: crosshair;
+    }
+    .tl-block {
+      position: absolute; left: 4px; right: 4px; border-radius: 6px;
+      padding: 4px 8px; font-size: 12px; overflow: hidden; cursor: pointer;
+      box-sizing: border-box;
+    }
+    .tl-block .tl-title { font-weight: 700; }
+    .tl-block .tl-time { font-size: 10px; opacity: 0.65; margin-top: 1px; }
+    .tl-block.status-past { background: #F8FAFC; color: var(--muted); border-left: 3px solid #E2E8F0; }
+    .tl-now {
+      position: absolute; left: 0; right: 0; height: 0; border-top: 2px solid #F43F5E;
+    }
+    .tl-now::before {
+      content: ""; position: absolute; left: -4px; top: -4px;
+      width: 8px; height: 8px; border-radius: 50%; background: #F43F5E;
+    }
+  </style>
+</head>
+<body class="compact">
+  <div class="topbar">
+    <div class="badge">🌱 Transit</div>
+    <div>
+      <button id="toggle-guide" class="btn-ghost">도움말</button>
+      <button id="toggle-size" class="btn-ghost">확대</button>
+    </div>
+  </div>
+  <h1>오늘 할 일을 알려주세요</h1>
+  <p class="subtitle">SNS를 오래 쓰는 순간, 이 일들로 넘어가는 다리를 만들어줄게요.</p>
+
+  <div id="guide-card" class="card" style="display:none;">
+    <h2>시작하는 법</h2>
+    <ol style="margin:0; padding-left: 20px; font-size: 14px; line-height: 1.8; color: var(--ink);">
+      <li><a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>에서 API 키 발급 (sk-ant-로 시작)</li>
+      <li>아래 "Anthropic API 키 설정" 펼쳐서 키 붙여넣고 저장</li>
+      <li>"할 일 추가"에 오늘 할 일과 주제 입력 (주제는 구체적일수록 좋아요)</li>
+      <li>이 창은 닫아도 됨 — 유튜브/넷플릭스/인스타를 오래 보면 자동으로 전환 활동이 떠요</li>
+      <li>활동 끝나면 "25분 집중 시작" → 다 되면 "시작했나요?" 알림에 답하면 성공률이 쌓여요</li>
+    </ol>
+    <button id="close-guide" class="btn-ghost" style="margin-top:12px;">닫기</button>
+  </div>
+
+  <div class="layout">
+    <div class="card col-timeline">
+      <h2>시간표</h2>
+      <div id="timeline-scroll">
+        <div class="tl-day-label">오늘</div>
+        <div class="tl-wrap" data-day="0">
+          <div class="tl-hours"></div>
+          <div class="tl-track">
+            <div class="tl-now"></div>
+          </div>
+        </div>
+        <div class="tl-day-label">내일</div>
+        <div class="tl-wrap" data-day="1">
+          <div class="tl-hours"></div>
+          <div class="tl-track"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-tasks">
+      <div class="card">
+        <h2>전환 성공률</h2>
+        <button id="clear-retro" class="btn-ghost" style="float:right; margin-top:0;">초기화</button>
+        <div id="retro-summary"></div>
+        <ul id="retro-list"></ul>
+      </div>
+
+      <div class="card">
+        <h2 id="task-form-title">할 일 추가</h2>
+        <form id="task-form">
+          <label>제목 <input type="text" id="title" required placeholder="예: 머신러닝 시험공부" /></label>
+          <label>시작 시각 <input type="datetime-local" id="time" required /></label>
+          <label>소요 시간(분) <input type="number" id="duration" required min="5" step="5" value="60" /></label>
+          <label>주제 & 문제유형 <textarea id="topic" required rows="3" placeholder="예: 선형대수 - 고유값과 고유벡터, 오퍼레이션스 리서치 최적화 문제"></textarea></label>
+          <button type="submit" id="task-submit" class="btn-primary">추가</button>
+          <button type="button" id="cancel-edit" class="btn-ghost" style="display:none;">취소</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="task-list-card" class="card">
+    <h2>할 일 목록</h2>
+    <ul id="task-list"></ul>
+
+    <details id="past-details" style="margin-top: 16px;">
+      <summary id="past-summary">지난 할 일</summary>
+      <button id="clear-past" class="btn-ghost">전체 삭제</button>
+      <ul id="task-list-past"></ul>
+    </details>
+  </div>
+
+  <details>
+    <summary>Anthropic API 키 설정</summary>
+    <div class="card">
+      <form id="key-form">
+        <input type="password" id="apiKey" placeholder="sk-ant-..." />
+        <button type="submit" class="btn-primary">저장</button>
+      </form>
+    </div>
+  </details>
+
+  <details>
+    <summary>디버그 도구</summary>
+    <div class="card">
+      <button id="clear-cache" class="btn-ghost">활동 캐시 초기화</button>
+      <label>tasks.json에서 불러오기 (기존 할 일 전체 교체)
+        <input type="file" id="import-tasks" accept="application/json" />
+      </label>
+    </div>
+  </details>
+
+  <script src="options.js"></script>
+</body>
+</html>
