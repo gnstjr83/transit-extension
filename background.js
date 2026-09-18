@@ -2,12 +2,16 @@ const ALARM_NAME = "transit-focus-end";
 const TIMEOUT_ALARM_NAME = "transit-retro-timeout";
 const NOTIF_ID = "transit-retro";
 const TIMEOUT_MIN = 10; // 이 시간 안에 예/아니오 응답 없으면 "예"로 간주
-const RETRO_LOG_MAX = 100; // sync 항목당 8KB 한도 안에 들어오게 최근 것만 유지
+const RETRO_LOG_SAFE_BYTES = 7000; // 8KB보다 여유 두고 자름 (tasks 쪽과 동일한 방식)
 
-// retroLog는 여러 기기에서 보이게 sync에 저장. 계속 쌓이기만 하면 8KB를 넘으니 최근 것만 유지.
+// retroLog는 여러 기기에서 보이게 sync에 저장. 개수 고정이 아니라 실제 용량을 재서,
+// 넘으면 오래된 기록부터 지움 — taskTitle 길이가 들쭉날쭉해도 안전하게.
 async function pushRetroEntry(entry) {
   const { retroLog } = await chrome.storage.sync.get({ retroLog: [] });
-  const next = [...retroLog, entry].slice(-RETRO_LOG_MAX);
+  const next = [...retroLog, entry];
+  while (next.length > 0 && JSON.stringify({ retroLog: next }).length > RETRO_LOG_SAFE_BYTES) {
+    next.shift(); // 가장 오래된 것부터 제거
+  }
   await chrome.storage.sync.set({ retroLog: next });
 }
 
