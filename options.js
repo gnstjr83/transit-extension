@@ -424,6 +424,13 @@ function renderTimeline() {
 renderTimeline();
 setInterval(renderTimeline, 60 * 1000); // 지금 시각 표시선 + 상태색 갱신
 
+// 처음 열었을 때 스크롤이 0시부터 시작하지 않고, 지금 시각이 위쪽 근처에 오게 맞춤 (딱 한 번만).
+(() => {
+  const scrollEl = document.getElementById("timeline-scroll");
+  const nowMin = minutesFromStart(new Date());
+  scrollEl.scrollTop = Math.max(0, (nowMin / 60) * HOUR_PX - 40);
+})();
+
 const pastList = document.getElementById("task-list-past");
 const pastSummary = document.getElementById("past-summary");
 

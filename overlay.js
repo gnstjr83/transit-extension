@@ -1,20 +1,21 @@
-const ACCENT = "#FF5A5F";
+const ACCENT = "#7CB342"; // 초록/연두 톤
 const INK = "#2B2620";
 const INK_MUTED = "#8A8378";
 const PAPER = "#FFFFFF";
 const BORDER = "#2B2620";
 const BORDER_SOFT = "#EFE2C8";
-const FONT_DISPLAY = '"Black Han Sans", "Jua", sans-serif';
-const FONT_BODY = '"Jua", sans-serif'; // 한글 지원 폰트 — Georgia 등은 한글 글리프가 없어서 조용히 대체됨
-const FONT_CODE = '"Courier New", monospace'; // 행렬/수식 줄맞춤용 (숫자·영문이라 모노스페이스 유지)
+// Noto Serif KR — 한글까지 실제로 커버하는 세리프라 "교재스러운" 느낌이 한글에도 적용됨.
+// 로드 실패해도 Georgia/시스템 폰트로 자연스럽게 대체됨.
+const FONT_DISPLAY = '"Noto Serif KR", Georgia, "Malgun Gothic", serif';
+const FONT_BODY = '"Noto Serif KR", Georgia, "Malgun Gothic", serif';
+const FONT_CODE = '"Courier New", monospace';
 
 function ensureStyles() {
   if (document.getElementById("transit-style")) return;
 
-  // 문방구 스티커 톤 폰트 (호스트 페이지 <head>에 한 번만 주입, 실패해도 시스템 폰트로 대체됨)
   const fontLink = document.createElement("link");
   fontLink.rel = "stylesheet";
-  fontLink.href = "https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Jua&display=swap";
+  fontLink.href = "https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&display=swap";
   document.head.appendChild(fontLink);
 
   const style = document.createElement("style");
@@ -161,10 +162,10 @@ function showNudge(title) {
   toast.style.cssText = `
     position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
     z-index: 2147483647; max-width: 90vw;
-    background: ${ACCENT}; color: #fff; padding: 18px 26px; border-radius: 16px;
-    border: 2.5px solid ${BORDER};
+    background: #fff; color: ${INK}; padding: 18px 26px; border-radius: 16px;
+    border: 2.5px solid ${BORDER}; border-left: 6px solid ${ACCENT};
     font-family: ${FONT_DISPLAY};
-    font-size: 20px; font-weight: 700;
+    font-size: 19px; font-weight: 700;
     box-shadow: 5px 5px 0 ${BORDER};
     animation: transit-fade-in 220ms ease-out;
   `;
@@ -235,7 +236,7 @@ function showOverlay(task, activity, onDismiss, focusMinutes = 25) {
 
   const nextBox = document.createElement("div");
   nextBox.style.cssText = `
-    background:#FFE3E4; border:2px solid ${ACCENT}; border-radius:12px; padding:14px 16px; margin-top:16px;
+    background:#EEF7E1; border:2px solid ${ACCENT}; border-radius:12px; padding:14px 16px; margin-top:16px;
   `;
   const label = document.createElement("div");
   label.style.cssText = `font-family:${FONT_DISPLAY}; font-size:13px; font-weight:700; color:${ACCENT}; margin-bottom:4px;`;
