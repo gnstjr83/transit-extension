@@ -21,7 +21,7 @@ chrome.storage.local.get({ apiKey: "" }, ({ apiKey }) => {
 const keySubmitBtn = document.getElementById("key-submit");
 keyForm.addEventListener("submit", (e) => {
   e.preventDefault();
-  chrome.storage.local.set({ apiKey: apiKeyInput.value }, () => flashSaved(keySubmitBtn));
+  chrome.storage.local.set({ apiKey: apiKeyInput.value.trim() }, () => flashSaved(keySubmitBtn));
 });
 
 // --- 트리거 설정: 시청 제한 시간 / 집중 타이머 (기본값: 실사용 기준 20분/25분) ---

@@ -1,5 +1,6 @@
 {
   "manifest_version": 3,
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoc7GyUG/RmisT8bRiENUh9lMFQK9O17a8ShJKC1Cxcp4mZTkC+KWF5yWd0BHdHeAlkbKrwLN/E7pThISRxutv+QDO6juAXYOVJgM/by8FZAI6MRoIIscQNPSRKqWn6CKDtEhQ5vkid9D+wcLo/BmO0Ibu8POafBauRkdqHnLx+J206Ac1USM/8j1VKmYnjdne8mQE6xnQpDYxFc1y+K2nfkztoPecEPyTvYY3q23a0o6wgs4tAD8zRCp9/Rlv/I0ZJf9cDvk5VF9c0C1DIp3mHwU6MZ4WRJDGI0P/TPORsnLSB9B9HaRFDxdzEVswMc1aJrXj2HKLj2qxcVT8OrtUQIDAQAB",
   "name": "Transit",
   "version": "0.1.0",
   "description": "SNS를 오래 쓴 순간, 지금 할 일로 넘어가게 돕는 전환 활동을 띄워주는 확장 프로그램",

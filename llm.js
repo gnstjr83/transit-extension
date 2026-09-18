@@ -51,10 +51,11 @@ function pickActivityType(topic, cache) {
 
 // idea.md: 활동 생성은 (주제, 활동유형, 남은시간) -> 활동 콘텐츠 1개 + 고정 포맷 종료 행동.
 async function generateActivity(task) {
-  const { apiKey, activityCache } = await chrome.storage.local.get({
+  const { apiKey: rawApiKey, activityCache } = await chrome.storage.local.get({
     apiKey: "",
     activityCache: {},
   });
+  const apiKey = rawApiKey.trim(); // 복붙 때 앞뒤 공백/줄바꿈 섞여도 자동 정리
   if (!apiKey) {
     console.warn("[Transit] API 키 없음 — 옵션 페이지에서 저장 필요");
     return null;
