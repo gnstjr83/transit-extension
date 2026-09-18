@@ -3,13 +3,47 @@ const list = document.getElementById("task-list");
 const keyForm = document.getElementById("key-form");
 const apiKeyInput = document.getElementById("apiKey");
 
+// 저장 버튼 누르면 잠깐 "저장됨"으로 바뀌면서 통통 튀는 모션
+function flashSaved(btn) {
+  const original = btn.textContent;
+  btn.textContent = "저장됨 ✓";
+  btn.classList.add("btn-saved");
+  setTimeout(() => {
+    btn.textContent = original;
+    btn.classList.remove("btn-saved");
+  }, 1100);
+}
+
 chrome.storage.local.get({ apiKey: "" }, ({ apiKey }) => {
   apiKeyInput.value = apiKey;
 });
 
+const keySubmitBtn = document.getElementById("key-submit");
 keyForm.addEventListener("submit", (e) => {
   e.preventDefault();
-  chrome.storage.local.set({ apiKey: apiKeyInput.value });
+  chrome.storage.local.set({ apiKey: apiKeyInput.value }, () => flashSaved(keySubmitBtn));
+});
+
+// --- 트리거 설정: 시청 제한 시간 / 집중 타이머 (기본값: 실사용 기준 20분/25분) ---
+const settingsForm = document.getElementById("settings-form");
+const settingsSubmitBtn = document.getElementById("settings-submit");
+const thresholdSecInput = document.getElementById("thresholdSec");
+const focusMinutesInput = document.getElementById("focusMinutes");
+
+chrome.storage.sync.get({ thresholdSec: 1200, focusMinutes: 25 }, ({ thresholdSec, focusMinutes }) => {
+  thresholdSecInput.value = thresholdSec;
+  focusMinutesInput.value = focusMinutes;
+});
+
+settingsForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  chrome.storage.sync.set(
+    {
+      thresholdSec: Number(thresholdSecInput.value),
+      focusMinutes: Number(focusMinutesInput.value),
+    },
+    () => flashSaved(settingsSubmitBtn)
+  );
 });
 
 // --- 튜토리얼: API 키가 아직 없으면(첫 실행 추정) 확대 + 자동으로 보여줌 ---
@@ -117,8 +151,8 @@ const END_HOUR = 24;
 const HOUR_PX = 60;
 const trackHeight = (END_HOUR - START_HOUR) * HOUR_PX;
 
-// .tl-wrap[data-day="0"]=오늘, "1"=내일. 각각 자기 hours/track/now(있으면)를 가짐.
-const sections = Array.from(document.querySelectorAll(".tl-wrap")).map((wrap) => ({
+// .tl-wrap[data-day="0"]=오늘, "1"=내일. day뷰의 .tl-wrap은 data-day가 없어서 여기서 제외됨.
+const sections = Array.from(document.querySelectorAll(".tl-wrap[data-day]")).map((wrap) => ({
   dayOffset: Number(wrap.dataset.day),
   wrap,
   hoursEl: wrap.querySelector(".tl-hours"),
@@ -144,14 +178,13 @@ function minutesFromStart(date) {
   return (date.getHours() - START_HOUR) * 60 + date.getMinutes();
 }
 
-// 0~4시간: 빨강 -> 노랑. 4~12시간: 노랑 -> 초록. 12시간 이후는 초록 고정.
-// 구글 캘린더 스타일: 왼쪽 굵은 색 바(진한 색) + 옅은 틴트 배경. 단색으로 꽉 채우지 않음.
-const RED_RGB = [239, 68, 68]; // red-500
-const YELLOW_RGB = [234, 179, 8]; // yellow-500
-const GREEN_RGB = [34, 197, 94]; // green-500
+// 0~4시간: 빨강 -> 노랑. 4~12시간: 노랑 -> 초록. 12시간 이후는 초록 고정. (스티커 톤, 쨍하게)
+const RED_RGB = [255, 82, 82]; // 비비드 레드
+const YELLOW_RGB = [255, 193, 7]; // 비비드 옐로
+const GREEN_RGB = [56, 193, 114]; // 비비드 그린
 const NEAR_WINDOW_MIN = 240; // 4시간
 const FAR_WINDOW_MIN = 720; // 12시간
-const BLOCK_TEXT = "#1f2937";
+const BLOCK_TEXT = "#2B2620";
 
 function lerpRGB(a, b, t) {
   return a.map((c, i) => Math.round(c + (b[i] - c) * t));
@@ -168,9 +201,16 @@ function urgencyColor(minutesAway) {
         );
   return {
     accent: `rgb(${r}, ${g}, ${b})`,
-    fill: `rgba(${r}, ${g}, ${b}, 0.12)`,
+    fill: `rgba(${r}, ${g}, ${b}, 0.22)`,
     text: BLOCK_TEXT,
   };
+}
+
+// task.id 기반 고정 각도(-1.8~1.8deg) — 새로고침마다 안 바뀌고, 블록마다 다르게 삐뚤어짐
+function rotationForId(id) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) % 1000;
+  return ((hash / 1000) * 3.6 - 1.8).toFixed(2);
 }
 
 function renderHourLabels(hoursEl) {
@@ -184,21 +224,22 @@ function renderHourLabels(hoursEl) {
   }
 }
 
-function renderSection(section, now, tasks) {
-  const { dayOffset, trackEl, nowEl } = section;
-  const dayDate = addDays(now, dayOffset);
+function renderSection(trackEl, hoursEl, nowEl, targetDate, now, tasks) {
   trackEl.style.height = `${trackHeight}px`;
 
   if (nowEl) {
-    const nowMin = minutesFromStart(now);
-    nowEl.style.top = `${Math.max(0, Math.min(trackHeight, (nowMin / 60) * HOUR_PX))}px`;
-    nowEl.style.display = nowMin >= 0 && nowMin <= (END_HOUR - START_HOUR) * 60 ? "block" : "none";
+    const showNow = isSameDay(targetDate, now);
+    if (showNow) {
+      const nowMin = minutesFromStart(now);
+      nowEl.style.top = `${Math.max(0, Math.min(trackHeight, (nowMin / 60) * HOUR_PX))}px`;
+    }
+    nowEl.style.display = showNow ? "block" : "none";
   }
 
   trackEl.querySelectorAll(".tl-block").forEach((el) => el.remove());
 
   tasks
-    .filter((t) => isSameDay(new Date(t.time), dayDate))
+    .filter((t) => isSameDay(new Date(t.time), targetDate))
     .forEach((task) => {
       const start = new Date(task.time);
       const end = new Date(start.getTime() + task.durationMin * 60000);
@@ -212,17 +253,17 @@ function renderSection(section, now, tasks) {
       block.className = `tl-block status-${status}`;
       block.style.top = `${(startMin / 60) * HOUR_PX}px`;
       block.style.height = `${Math.max(18, ((endMin - startMin) / 60) * HOUR_PX)}px`;
+      block.style.transform = `rotate(${rotationForId(task.id)}deg)`; // 코르크보드에 핀으로 대충 꽂은 느낌
       if (status !== "past") {
         const minutesAway = status === "ongoing" ? 0 : (start - now) / 60000;
-        const { accent, fill, text } = urgencyColor(minutesAway);
-        block.style.background = fill;
-        block.style.borderLeft = `3px solid ${accent}`;
+        const { accent, text } = urgencyColor(minutesAway);
+        block.style.border = `2.5px solid ${accent}`;
         block.style.color = text;
       }
       block.title = `${task.title} (${task.topic})`;
       const titleEl = document.createElement("div");
       titleEl.className = "tl-title";
-      titleEl.textContent = task.title;
+      titleEl.textContent = `📌 ${task.title}`;
       const timeEl = document.createElement("div");
       timeEl.className = "tl-time";
       timeEl.textContent = `${pad(start.getHours())}:${pad(start.getMinutes())}–${pad(end.getHours())}:${pad(end.getMinutes())}`;
@@ -233,26 +274,152 @@ function renderSection(section, now, tasks) {
     });
 }
 
-function renderTimeline() {
-  const now = new Date();
-  chrome.storage.local.get({ tasks: [] }, ({ tasks }) => {
-    sections.forEach((section) => renderSection(section, now, tasks));
-  });
-}
-
-sections.forEach((section) => {
-  section.trackEl.addEventListener("click", (e) => {
+// 시간표 빈칸 클릭하면 그 시각으로 "할 일 추가" 폼 프리필. baseDateFn()으로 기준 날짜를
+// 그때그때 다시 구함 — day뷰는 selectedDate가 계속 바뀌니까 클릭 시점에 읽어야 함.
+function bindTrackClickForAdd(trackEl, baseDateFn) {
+  trackEl.addEventListener("click", (e) => {
     const clickY = e.offsetY;
     const rawMin = (clickY / HOUR_PX) * 60 + START_HOUR * 60;
     const rounded = Math.round(rawMin / 5) * 5; // 5분 단위로 스냅
-    const d = addDays(new Date(), section.dayOffset);
+    const d = new Date(baseDateFn());
     d.setHours(0, rounded, 0, 0);
     document.getElementById("time").value = localISO(d);
     document.getElementById("title").focus();
     document.getElementById("task-form").scrollIntoView({ behavior: "smooth", block: "center" });
   });
+}
+
+sections.forEach((section) => {
+  bindTrackClickForAdd(section.trackEl, () => addDays(new Date(), section.dayOffset));
   renderHourLabels(section.hoursEl);
 });
+
+// --- 특정 날짜(day) 뷰 ---
+const dayHoursEl = document.getElementById("day-hours");
+const dayTrackEl = document.getElementById("day-track");
+const dayNowEl = document.getElementById("day-now");
+const dayLabelEl = document.getElementById("tl-day-label-text");
+renderHourLabels(dayHoursEl);
+bindTrackClickForAdd(dayTrackEl, () => selectedDate);
+
+function renderDayView() {
+  dayLabelEl.textContent = selectedDate.toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  });
+  const now = new Date();
+  chrome.storage.sync.get({ tasks: [] }, ({ tasks }) => {
+    renderSection(dayTrackEl, dayHoursEl, dayNowEl, selectedDate, now, tasks);
+  });
+}
+
+// --- 월별 캘린더 뷰 ---
+const monthGrid = document.getElementById("month-grid");
+const monthLabel = document.getElementById("month-label");
+const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
+
+function renderMonthView() {
+  const year = calendarMonth.getFullYear();
+  const month = calendarMonth.getMonth();
+  monthLabel.textContent = `${year}년 ${month + 1}월`;
+
+  chrome.storage.sync.get({ tasks: [] }, ({ tasks }) => {
+    const countByDay = {};
+    tasks.forEach((t) => {
+      const d = new Date(t.time);
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        countByDay[d.getDate()] = (countByDay[d.getDate()] ?? 0) + 1;
+      }
+    });
+
+    monthGrid.innerHTML = "";
+    WEEKDAY_LABELS.forEach((w) => {
+      const el = document.createElement("div");
+      el.className = "month-weekday";
+      el.textContent = w;
+      monthGrid.appendChild(el);
+    });
+
+    const startOffset = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
+
+    for (let i = 0; i < startOffset; i++) {
+      monthGrid.appendChild(document.createElement("div"));
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const cellDate = new Date(year, month, day);
+      const cell = document.createElement("div");
+      cell.className = "month-day";
+      if (isSameDay(cellDate, today)) cell.classList.add("month-day-today");
+
+      const num = document.createElement("div");
+      num.textContent = day;
+      cell.appendChild(num);
+
+      if (countByDay[day]) {
+        const dot = document.createElement("div");
+        dot.className = "month-day-dot";
+        dot.textContent = countByDay[day];
+        cell.appendChild(dot);
+      }
+
+      cell.onclick = () => {
+        selectedDate = cellDate;
+        setViewMode("day");
+      };
+      monthGrid.appendChild(cell);
+    }
+  });
+}
+
+document.getElementById("month-prev").addEventListener("click", () => {
+  calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1);
+  renderMonthView();
+});
+document.getElementById("month-next").addEventListener("click", () => {
+  calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1);
+  renderMonthView();
+});
+
+// --- 뷰 전환 ---
+let viewMode = "default"; // "default" | "day" | "month"
+let selectedDate = new Date();
+let calendarMonth = new Date();
+
+const defaultViewEl = document.getElementById("tl-default-view");
+const dayViewEl = document.getElementById("tl-day-view");
+const monthViewEl = document.getElementById("tl-month-view");
+
+function setViewMode(mode) {
+  viewMode = mode;
+  defaultViewEl.style.display = mode === "default" ? "block" : "none";
+  dayViewEl.style.display = mode === "day" ? "block" : "none";
+  monthViewEl.style.display = mode === "month" ? "block" : "none";
+  if (mode === "day") renderDayView();
+  if (mode === "month") renderMonthView();
+}
+
+document.getElementById("tl-today-btn").addEventListener("click", () => setViewMode("default"));
+document.getElementById("tl-calendar-btn").addEventListener("click", () => setViewMode("month"));
+
+function renderTimeline() {
+  const now = new Date();
+  if (viewMode === "default") {
+    chrome.storage.sync.get({ tasks: [] }, ({ tasks }) => {
+      sections.forEach((section) =>
+        renderSection(section.trackEl, section.hoursEl, section.nowEl, addDays(now, section.dayOffset), now, tasks)
+      );
+    });
+  } else if (viewMode === "day") {
+    renderDayView();
+  } else if (viewMode === "month") {
+    renderMonthView(); // 할 일 추가/삭제 시 날짜별 점 개수도 같이 갱신되게
+  }
+}
 
 renderTimeline();
 setInterval(renderTimeline, 60 * 1000); // 지금 시각 표시선 + 상태색 갱신
@@ -297,7 +464,7 @@ function buildTaskRow(task) {
 }
 
 function loadTasks() {
-  chrome.storage.local.get({ tasks: [] }, ({ tasks }) => {
+  chrome.storage.sync.get({ tasks: [] }, ({ tasks }) => {
     const now = new Date();
     const upcoming = tasks.filter((t) => !isTaskPast(t, now));
     const past = tasks.filter((t) => isTaskPast(t, now));
@@ -312,8 +479,8 @@ function loadTasks() {
 }
 
 function removeTask(id) {
-  chrome.storage.local.get({ tasks: [] }, ({ tasks }) => {
-    chrome.storage.local.set({ tasks: tasks.filter((t) => t.id !== id) }, () => {
+  chrome.storage.sync.get({ tasks: [] }, ({ tasks }) => {
+    chrome.storage.sync.set({ tasks: tasks.filter((t) => t.id !== id) }, () => {
       loadTasks();
       renderTimeline();
     });
@@ -321,13 +488,13 @@ function removeTask(id) {
 }
 
 document.getElementById("clear-past").addEventListener("click", () => {
-  chrome.storage.local.get({ tasks: [] }, ({ tasks }) => {
+  chrome.storage.sync.get({ tasks: [] }, ({ tasks }) => {
     const now = new Date();
     const remaining = tasks.filter((t) => !isTaskPast(t, now));
     const removedCount = tasks.length - remaining.length;
     if (removedCount === 0) return;
     if (!confirm(`지난 할 일 ${removedCount}개를 삭제할까요?`)) return;
-    chrome.storage.local.set({ tasks: remaining }, () => {
+    chrome.storage.sync.set({ tasks: remaining }, () => {
       loadTasks();
       renderTimeline();
     });
@@ -370,11 +537,11 @@ form.addEventListener("submit", (e) => {
     durationMin: Number(document.getElementById("duration").value),
     topic: document.getElementById("topic").value,
   };
-  chrome.storage.local.get({ tasks: [] }, ({ tasks }) => {
+  chrome.storage.sync.get({ tasks: [] }, ({ tasks }) => {
     const newTasks = editingId
       ? tasks.map((t) => (t.id === editingId ? { ...t, ...taskData } : t))
       : [...tasks, { id: crypto.randomUUID(), ...taskData }];
-    chrome.storage.local.set({ tasks: newTasks }, () => {
+    chrome.storage.sync.set({ tasks: newTasks }, () => {
       stopEdit();
       loadTasks();
       renderTimeline();
@@ -399,7 +566,7 @@ document.getElementById("import-tasks").addEventListener("change", async (e) => 
   }
 
   const tasks = imported.map((t) => ({ id: t.id ?? crypto.randomUUID(), ...t }));
-  chrome.storage.local.set({ tasks }, () => {
+  chrome.storage.sync.set({ tasks }, () => {
     alert(`${tasks.length}개 할 일 불러옴`);
     loadTasks();
     renderTimeline();
@@ -408,3 +575,104 @@ document.getElementById("import-tasks").addEventListener("change", async (e) => 
 });
 
 loadTasks();
+
+// --- 감시 사이트 관리 ---
+// background.js의 DEFAULT_SITES와 동일 (첫 로드 시 기본값 표시용, 실제 시드는 background에서 함).
+const DEFAULT_SITES = [
+  { id: "site-youtube", label: "youtube.com", pattern: "*://*.youtube.com/*", enabled: true, builtin: true },
+  { id: "site-netflix", label: "netflix.com", pattern: "*://*.netflix.com/*", enabled: true, builtin: true },
+  { id: "site-instagram", label: "instagram.com", pattern: "*://*.instagram.com/*", enabled: true, builtin: true },
+];
+
+const siteList = document.getElementById("site-list");
+const siteForm = document.getElementById("site-form");
+const siteUrlInput = document.getElementById("site-url");
+
+function hostnameFromInput(raw) {
+  try {
+    const url = raw.includes("://") ? raw : `https://${raw}`;
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
+function renderSites() {
+  chrome.storage.sync.get({ sites: DEFAULT_SITES }, ({ sites }) => {
+    siteList.innerHTML = "";
+    sites.forEach((site) => {
+      const li = document.createElement("li");
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = site.enabled;
+      checkbox.onchange = () => toggleSite(site.id, checkbox.checked);
+
+      const label = document.createElement("span");
+      label.textContent = site.label;
+
+      li.appendChild(checkbox);
+      li.appendChild(label);
+
+      if (!site.builtin) {
+        const delBtn = document.createElement("button");
+        delBtn.className = "btn-ghost";
+        delBtn.textContent = "삭제";
+        delBtn.onclick = () => removeSite(site.id);
+        li.appendChild(delBtn);
+      }
+
+      siteList.appendChild(li);
+    });
+  });
+}
+
+function toggleSite(id, enabled) {
+  chrome.storage.sync.get({ sites: DEFAULT_SITES }, ({ sites }) => {
+    const next = sites.map((s) => (s.id === id ? { ...s, enabled } : s));
+    chrome.storage.sync.set({ sites: next }, renderSites);
+  });
+}
+
+function removeSite(id) {
+  chrome.storage.sync.get({ sites: DEFAULT_SITES }, ({ sites }) => {
+    chrome.storage.sync.set({ sites: sites.filter((s) => s.id !== id) }, renderSites);
+  });
+}
+
+siteForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const hostname = hostnameFromInput(siteUrlInput.value.trim());
+  if (!hostname) {
+    alert("올바른 URL이나 도메인을 입력해줘 (예: tiktok.com)");
+    return;
+  }
+  const pattern = `*://*.${hostname}/*`;
+
+  // 새 도메인은 옵션 페이지(사용자 제스처 안)에서 직접 권한 요청해야 함 — background에선 안 됨.
+  const granted = await chrome.permissions.request({ origins: [pattern] });
+  if (!granted) {
+    alert("권한을 허용해야 그 사이트에서 동작해");
+    return;
+  }
+
+  chrome.storage.sync.get({ sites: DEFAULT_SITES }, ({ sites }) => {
+    if (sites.some((s) => s.pattern === pattern)) {
+      alert("이미 추가된 사이트야");
+      return;
+    }
+    const newSite = {
+      id: `site-${crypto.randomUUID()}`,
+      label: hostname,
+      pattern,
+      enabled: true,
+      builtin: false,
+    };
+    chrome.storage.sync.set({ sites: [...sites, newSite] }, () => {
+      siteUrlInput.value = "";
+      renderSites();
+    });
+  });
+});
+
+renderSites();

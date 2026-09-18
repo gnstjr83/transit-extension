@@ -3,12 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <title>Transit 설정</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Jua&display=swap"
+    rel="stylesheet"
+  />
   <style>
-    :root { --accent: #14B8A6; --accent-bg: #F0FDFA; --ink: #1f2937; --muted: #6b7280; }
+    :root {
+      --accent: #FF5A5F; --accent-bg: #FFE3E4;
+      --ink: #2B2620; --muted: #8A8378;
+      --paper: #FFF6E0; --paper-card: #FFFFFF; --paper-border: #2B2620; --border-soft: #EFE2C8;
+      --font-display: "Black Han Sans", "Jua", sans-serif;
+      --font-mono: "Jua", sans-serif;
+      --font-body: "Jua", sans-serif;
+    }
     * { box-sizing: border-box; }
     body {
-      font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
-      background: #F8FAFC; color: var(--ink);
+      font-family: var(--font-body);
+      background: var(--paper); color: var(--ink);
       margin: 0; padding: 24px 16px 60px;
     }
     .layout { display: flex; gap: 20px; align-items: flex-start; }
@@ -18,108 +31,161 @@
 
     /* 컴팩트 모드: 시간표만 보이고 나머지는 숨김 */
     body.compact h1, body.compact .subtitle, body.compact .col-tasks,
-    body.compact #task-list-card, body.compact details, body.compact #guide-card,
-    body.compact #toggle-guide {
+    body.compact #task-list-card, body.compact #settings-card, body.compact #sites-card,
+    body.compact details, body.compact #guide-card, body.compact #toggle-guide {
       display: none;
     }
     .badge {
-      display: inline-block; font-size: 13px; font-weight: 600;
-      color: var(--accent); background: var(--accent-bg);
-      padding: 4px 10px; border-radius: 999px; margin-bottom: 8px;
+      display: inline-block; font-family: var(--font-display); font-size: 15px; font-weight: 700;
+      color: #fff; background: var(--accent);
+      border: 2.5px solid var(--ink); border-radius: 999px;
+      padding: 5px 14px; margin-bottom: 10px; transform: rotate(-2deg);
+      box-shadow: 3px 3px 0 var(--ink);
     }
-    h1 { font-size: 22px; margin: 0 0 4px; }
-    .subtitle { color: var(--muted); font-size: 14px; margin: 0 0 28px; }
+    h1 { font-family: var(--font-display); font-size: 30px; font-weight: 700; margin: 0 0 6px; letter-spacing: -0.01em; }
+    .subtitle { font-family: var(--font-body); color: var(--muted); font-size: 15px; margin: 0 0 28px; }
     .card {
-      background: #fff; border-radius: 16px; padding: 22px;
-      box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
-      margin-bottom: 20px;
+      background: var(--paper-card); border-radius: 18px; padding: 22px;
+      border: 2.5px solid var(--paper-border);
+      box-shadow: 4px 4px 0 var(--ink);
+      margin-bottom: 22px;
     }
-    .card h2 { font-size: 15px; margin: 0 0 16px; color: var(--ink); }
-    label { display: block; margin-top: 14px; font-size: 13px; color: var(--muted); }
+    .card h2 {
+      font-family: var(--font-display); font-size: 23px; font-weight: 700;
+      margin: 0 0 16px; color: var(--ink); letter-spacing: -0.01em;
+    }
+    label { display: block; margin-top: 14px; font-family: var(--font-body); font-size: 14px; color: var(--muted); }
     label:first-child { margin-top: 0; }
     input[type="text"], input[type="password"], input[type="number"], input[type="datetime-local"], textarea {
       width: 100%; padding: 10px 12px; margin-top: 4px; box-sizing: border-box;
-      border: 1px solid #E2E8F0; border-radius: 10px; font-size: 14px;
-      background: #F8FAFC; color: var(--ink);
-      font-family: inherit;
+      border: 2px solid var(--paper-border); border-radius: 10px; font-size: 15px;
+      background: #fff; color: var(--ink);
+      font-family: var(--font-body);
     }
     textarea { resize: vertical; }
     input:focus, textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
     button {
-      border: none; border-radius: 999px; cursor: pointer; font-weight: 600;
-      transition: opacity .15s;
+      border: none; border-radius: 999px; cursor: pointer; font-weight: 700;
+      font-family: var(--font-display); letter-spacing: 0.01em;
+      transition: transform .1s, box-shadow .1s;
     }
-    button:hover { opacity: 0.85; }
+    button:hover { opacity: 0.9; }
+    @keyframes save-pulse {
+      0% { transform: scale(1); }
+      35% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+    .btn-saved { animation: save-pulse 0.35s ease-out; background: #4A5D3A !important; }
     .btn-primary {
-      margin-top: 16px; padding: 10px 20px; font-size: 14px;
+      margin-top: 16px; padding: 11px 22px; font-size: 15px;
       background: var(--accent); color: #fff;
+      border: 2.5px solid var(--ink); box-shadow: 3px 3px 0 var(--ink);
     }
+    .btn-primary:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
     .btn-ghost {
-      padding: 6px 12px; font-size: 13px; background: transparent; color: var(--muted);
+      padding: 7px 16px; font-size: 14px; background: #fff; color: var(--ink);
+      border: 2.5px solid var(--ink); border-radius: 999px;
     }
-    #task-list, #task-list-past { list-style: none; padding: 0; margin: 0; }
+    #task-list, #task-list-past, #site-list { list-style: none; padding: 0; margin: 0; }
     #task-list li, #task-list-past li {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 12px 0; border-bottom: 1px solid #F1F5F9;
+      padding: 12px 0; border-bottom: 2px dashed var(--border-soft);
     }
     #task-list li:last-child, #task-list-past li:last-child { border-bottom: none; }
+    #site-list li {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 0; border-bottom: 2px dashed var(--border-soft); font-size: 14px;
+      font-family: var(--font-body);
+    }
+    #site-list li:last-child { border-bottom: none; }
+    #site-list li span { flex: 1; }
+    #site-list input[type="checkbox"] { width: auto; margin: 0; }
     #past-details { color: var(--muted); font-size: 13px; }
     #past-details summary { cursor: pointer; display: inline; }
     #past-details #clear-past { float: right; margin-top: -4px; }
-    .task-main { font-size: 14px; }
-    .task-main .title { font-weight: 600; }
-    .task-main .meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .task-main { font-family: var(--font-body); font-size: 15px; }
+    .task-main .title { font-weight: 700; }
+    .task-main .meta { font-family: var(--font-body); color: var(--muted); font-size: 13px; margin-top: 2px; }
 
-    .stat-rate { font-size: 32px; font-weight: 700; color: var(--ink); }
-    .stat-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .stat-rate { font-family: var(--font-display); font-size: 38px; font-weight: 700; color: var(--accent); }
+    .stat-sub { font-family: var(--font-body); font-size: 13px; color: var(--muted); margin-top: 2px; }
     #retro-list { list-style: none; padding: 0; margin: 16px 0 0; }
     #retro-list li {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 8px 0; border-top: 1px solid #F1F5F9; font-size: 13px;
+      padding: 8px 0; border-top: 2px dashed var(--border-soft); font-size: 13px;
+      font-family: var(--font-body);
     }
-    .retro-yes { color: var(--accent); font-weight: 700; }
-    .retro-no { color: #F43F5E; font-weight: 700; }
+    .retro-yes { color: #4A5D3A; font-weight: 700; }
+    .retro-no { color: var(--accent); font-weight: 700; }
     details { color: var(--muted); font-size: 13px; }
-    details summary { cursor: pointer; margin-bottom: 8px; }
-    details .card { box-shadow: none; border: 1px dashed #E2E8F0; }
+    details summary { cursor: pointer; margin-bottom: 8px; font-family: var(--font-mono); }
+    details .card { box-shadow: none; border: 2px dashed var(--border-soft); }
 
     #timeline-scroll { max-height: calc(100vh - 130px); overflow-y: auto; }
+    .tl-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+    .month-weekday { text-align: center; font-family: var(--font-display); font-size: 13px; color: var(--muted); padding-bottom: 6px; }
+    .month-day {
+      aspect-ratio: 1; border-radius: 14px; padding: 6px;
+      font-family: var(--font-body); font-size: 15px; cursor: pointer; position: relative;
+      background: #fff; border: 2px solid var(--border-soft);
+      box-shadow: 2px 2px 0 var(--border-soft);
+      transition: background .15s, transform .1s;
+    }
+    .month-day:hover { background: var(--accent-bg); transform: translateY(-1px); }
+    .month-day-today {
+      background: var(--accent-bg); color: var(--accent); font-weight: 700;
+      border-color: var(--accent); box-shadow: 2px 2px 0 var(--accent);
+    }
+    .month-day-dot {
+      position: absolute; bottom: 6px; right: 6px;
+      background: var(--accent); color: #fff; font-size: 10px; font-weight: 700;
+      border: 1.5px solid var(--ink);
+      border-radius: 999px; min-width: 17px; height: 17px;
+      display: flex; align-items: center; justify-content: center; padding: 0 3px;
+    }
     .tl-day-label {
-      font-size: 12px; font-weight: 700; color: var(--muted);
-      margin: 16px 0 8px; text-transform: uppercase; letter-spacing: 0.02em;
+      font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--ink);
+      margin: 16px 0 8px;
     }
     .tl-day-label:first-child { margin-top: 0; }
     .tl-wrap { position: relative; display: flex; }
     .tl-hours {
-      width: 44px; flex-shrink: 0; position: relative;
-      font-size: 11px; color: var(--muted);
+      width: 46px; flex-shrink: 0; position: relative;
+      font-family: var(--font-body); font-size: 12px; color: var(--muted); font-weight: 700;
     }
     .tl-hours span { position: absolute; transform: translateY(-50%); }
     .tl-track {
-      flex: 1; position: relative; border-left: 1px solid #F1F5F9;
-      background-image: repeating-linear-gradient(to bottom, #F1F5F9 0, #F1F5F9 1px, transparent 1px, transparent 60px);
+      flex: 1; position: relative; border-left: 2px solid var(--border-soft);
+      background-image: repeating-linear-gradient(to bottom, var(--border-soft) 0, var(--border-soft) 1px, transparent 1px, transparent 60px);
       cursor: crosshair;
     }
     .tl-block {
-      position: absolute; left: 4px; right: 4px; border-radius: 6px;
-      padding: 4px 8px; font-size: 12px; overflow: hidden; cursor: pointer;
-      box-sizing: border-box;
+      position: absolute; left: 4px; right: 4px; border-radius: 10px;
+      padding: 6px 10px; font-family: var(--font-body); font-size: 14px; overflow: hidden; cursor: pointer;
+      box-sizing: border-box; background: #fff;
+      box-shadow: 2px 3px 0 rgba(43, 38, 32, 0.18);
     }
     .tl-block .tl-title { font-weight: 700; }
-    .tl-block .tl-time { font-size: 10px; opacity: 0.65; margin-top: 1px; }
-    .tl-block.status-past { background: #F8FAFC; color: var(--muted); border-left: 3px solid #E2E8F0; }
+    .tl-block .tl-time { font-family: var(--font-body); font-size: 12px; opacity: 0.75; margin-top: 1px; }
+    .tl-block.status-past {
+      background: #EAE7DF; color: #9A9488; border: 2.5px solid #C9C2B2; box-shadow: none;
+    }
     .tl-now {
-      position: absolute; left: 0; right: 0; height: 0; border-top: 2px solid #F43F5E;
+      position: absolute; left: 0; right: 0; height: 0; border-top: 2px dashed var(--accent);
+      z-index: 20; pointer-events: none;
     }
     .tl-now::before {
-      content: ""; position: absolute; left: -4px; top: -4px;
-      width: 8px; height: 8px; border-radius: 50%; background: #F43F5E;
+      content: "⏰"; position: absolute; left: -36px; top: -13px;
+      width: 26px; height: 26px; line-height: 22px; text-align: center; font-size: 13px;
+      background: var(--accent); border: 2.5px solid var(--ink); border-radius: 50%;
+      box-shadow: 2px 2px 0 var(--ink);
     }
   </style>
 </head>
 <body class="compact">
   <div class="topbar">
-    <div class="badge">🌱 Transit</div>
+    <div class="badge">🔍 CASE: TRANSIT</div>
     <div>
       <button id="toggle-guide" class="btn-ghost">도움말</button>
       <button id="toggle-size" class="btn-ghost">확대</button>
@@ -142,20 +208,50 @@
 
   <div class="layout">
     <div class="card col-timeline">
-      <h2>시간표</h2>
-      <div id="timeline-scroll">
-        <div class="tl-day-label">오늘</div>
-        <div class="tl-wrap" data-day="0">
-          <div class="tl-hours"></div>
-          <div class="tl-track">
-            <div class="tl-now"></div>
+      <div class="tl-header">
+        <h2 style="margin:0;">시간표</h2>
+        <div>
+          <button id="tl-today-btn" class="btn-ghost">오늘</button>
+          <button id="tl-calendar-btn" class="btn-ghost">캘린더</button>
+        </div>
+      </div>
+
+      <div id="tl-default-view">
+        <div id="timeline-scroll">
+          <div class="tl-day-label">오늘</div>
+          <div class="tl-wrap" data-day="0">
+            <div class="tl-hours"></div>
+            <div class="tl-track">
+              <div class="tl-now"></div>
+            </div>
+          </div>
+          <div class="tl-day-label">내일</div>
+          <div class="tl-wrap" data-day="1">
+            <div class="tl-hours"></div>
+            <div class="tl-track"></div>
           </div>
         </div>
-        <div class="tl-day-label">내일</div>
-        <div class="tl-wrap" data-day="1">
-          <div class="tl-hours"></div>
-          <div class="tl-track"></div>
+      </div>
+
+      <div id="tl-day-view" style="display:none;">
+        <div id="tl-day-label-text" class="tl-day-label" style="margin-top:0;"></div>
+        <div id="day-scroll" style="max-height: calc(100vh - 180px); overflow-y: auto;">
+          <div class="tl-wrap">
+            <div id="day-hours" class="tl-hours"></div>
+            <div id="day-track" class="tl-track">
+              <div id="day-now" class="tl-now"></div>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <div id="tl-month-view" style="display:none;">
+        <div class="tl-header" style="margin-bottom:10px;">
+          <button id="month-prev" class="btn-ghost">‹ 이전</button>
+          <div id="month-label" style="font-weight:700;"></div>
+          <button id="month-next" class="btn-ghost">다음 ›</button>
+        </div>
+        <div id="month-grid" class="month-grid"></div>
       </div>
     </div>
 
@@ -173,7 +269,7 @@
           <label>제목 <input type="text" id="title" required placeholder="예: 머신러닝 시험공부" /></label>
           <label>시작 시각 <input type="datetime-local" id="time" required /></label>
           <label>소요 시간(분) <input type="number" id="duration" required min="5" step="5" value="60" /></label>
-          <label>주제 & 문제유형 <textarea id="topic" required rows="3" placeholder="예: 선형대수 - 고유값과 고유벡터, 오퍼레이션스 리서치 최적화 문제"></textarea></label>
+          <label>주제 & 문제유형 <textarea id="topic" required rows="3" maxlength="200" placeholder="예: 선형대수 - 고유값과 고유벡터, 오퍼레이션스 리서치 최적화 문제"></textarea></label>
           <button type="submit" id="task-submit" class="btn-primary">추가</button>
           <button type="button" id="cancel-edit" class="btn-ghost" style="display:none;">취소</button>
         </form>
@@ -193,12 +289,32 @@
     </details>
   </div>
 
+  <div class="layout">
+    <div id="settings-card" class="card" style="flex:1;">
+      <h2>트리거 설정</h2>
+      <form id="settings-form">
+        <label>시청 제한 시간(초) <input type="number" id="thresholdSec" required min="5" step="5" /></label>
+        <label>집중 타이머(분) <input type="number" id="focusMinutes" required min="0.1" step="0.1" /></label>
+        <button type="submit" id="settings-submit" class="btn-primary">저장</button>
+      </form>
+    </div>
+
+    <div id="sites-card" class="card" style="flex:2;">
+      <h2>감시 사이트</h2>
+      <ul id="site-list"></ul>
+      <form id="site-form" style="display:flex; gap:8px; margin-top:14px;">
+        <input type="text" id="site-url" placeholder="예: tiktok.com" style="margin-top:0;" />
+        <button type="submit" class="btn-primary" style="margin-top:0; white-space:nowrap;">추가</button>
+      </form>
+    </div>
+  </div>
+
   <details>
     <summary>Anthropic API 키 설정</summary>
     <div class="card">
       <form id="key-form">
         <input type="password" id="apiKey" placeholder="sk-ant-..." />
-        <button type="submit" class="btn-primary">저장</button>
+        <button type="submit" id="key-submit" class="btn-primary">저장</button>
       </form>
     </div>
   </details>

@@ -3,7 +3,7 @@
   "name": "Transit",
   "version": "0.1.0",
   "description": "SNS를 오래 쓴 순간, 지금 할 일로 넘어가게 돕는 전환 활동을 띄워주는 확장 프로그램",
-  "permissions": ["storage", "alarms", "notifications"],
+  "permissions": ["storage", "alarms", "notifications", "scripting"],
   "background": { "service_worker": "background.js" },
   "host_permissions": [
     "*://*.youtube.com/*",
@@ -11,15 +11,6 @@
     "*://*.instagram.com/*",
     "https://api.anthropic.com/*"
   ],
-  "options_page": "options.html",
-  "content_scripts": [
-    {
-      "matches": [
-        "*://*.youtube.com/*",
-        "*://*.netflix.com/*",
-        "*://*.instagram.com/*"
-      ],
-      "js": ["taskSelector.js", "overlay.js", "llm.js", "content.js"]
-    }
-  ]
+  "optional_host_permissions": ["*://*/*"],
+  "options_page": "options.html"
 }
