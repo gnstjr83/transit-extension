@@ -438,6 +438,32 @@ function isTaskPast(task, now) {
   return now.getTime() >= new Date(task.time).getTime() + task.durationMin * 60000;
 }
 
+// tasks 전체가 sync 항목당 8KB 한도에 걸릴 걱정 없게, 저장 직전에 크기를 재서
+// 넘으면 "지난 할 일"부터(오래된 순) 자동으로 지움. 예정/진행중인 일정은 절대 안 건드림.
+const TASKS_SAFE_BYTES = 7000; // 8KB보다 여유 두고 자름
+function trimTasksToFit(tasks) {
+  const now = new Date();
+  const list = [...tasks];
+  while (JSON.stringify({ tasks: list }).length > TASKS_SAFE_BYTES) {
+    const pastEntries = list
+      .map((t, i) => ({ t, i }))
+      .filter(({ t }) => isTaskPast(t, now))
+      .sort((a, b) => new Date(a.t.time) - new Date(b.t.time));
+    if (pastEntries.length === 0) break; // 지울 지난 할 일이 없으면 더 이상 못 줄임
+    list.splice(pastEntries[0].i, 1);
+  }
+  return list;
+}
+
+function saveTasks(tasks, callback) {
+  const trimmed = trimTasksToFit(tasks);
+  const droppedCount = tasks.length - trimmed.length;
+  if (droppedCount > 0) {
+    console.warn(`[Transit] 저장 용량(8KB) 초과 우려로 지난 할 일 ${droppedCount}개 자동 정리함`);
+  }
+  chrome.storage.sync.set({ tasks: trimmed }, () => callback?.(droppedCount));
+}
+
 function buildTaskRow(task) {
   const li = document.createElement("li");
 
@@ -487,7 +513,7 @@ function loadTasks() {
 
 function removeTask(id) {
   chrome.storage.sync.get({ tasks: [] }, ({ tasks }) => {
-    chrome.storage.sync.set({ tasks: tasks.filter((t) => t.id !== id) }, () => {
+    saveTasks(tasks.filter((t) => t.id !== id), () => {
       loadTasks();
       renderTimeline();
     });
@@ -501,7 +527,7 @@ document.getElementById("clear-past").addEventListener("click", () => {
     const removedCount = tasks.length - remaining.length;
     if (removedCount === 0) return;
     if (!confirm(`지난 할 일 ${removedCount}개를 삭제할까요?`)) return;
-    chrome.storage.sync.set({ tasks: remaining }, () => {
+    saveTasks(remaining, () => {
       loadTasks();
       renderTimeline();
     });
@@ -548,7 +574,7 @@ form.addEventListener("submit", (e) => {
     const newTasks = editingId
       ? tasks.map((t) => (t.id === editingId ? { ...t, ...taskData } : t))
       : [...tasks, { id: crypto.randomUUID(), ...taskData }];
-    chrome.storage.sync.set({ tasks: newTasks }, () => {
+    saveTasks(newTasks, () => {
       stopEdit();
       loadTasks();
       renderTimeline();
@@ -573,8 +599,10 @@ document.getElementById("import-tasks").addEventListener("change", async (e) => 
   }
 
   const tasks = imported.map((t) => ({ id: t.id ?? crypto.randomUUID(), ...t }));
-  chrome.storage.sync.set({ tasks }, () => {
-    alert(`${tasks.length}개 할 일 불러옴`);
+  saveTasks(tasks, (droppedCount) => {
+    alert(droppedCount > 0
+      ? `${tasks.length}개 중 ${tasks.length - droppedCount}개 불러옴 (용량 초과로 지난 할 일 ${droppedCount}개는 제외)`
+      : `${tasks.length}개 할 일 불러옴`);
     loadTasks();
     renderTimeline();
   });
