@@ -3,6 +3,18 @@ const list = document.getElementById("task-list");
 const keyForm = document.getElementById("key-form");
 const apiKeyInput = document.getElementById("apiKey");
 
+// --- 화면 배율: 컴퓨터(화면 해상도)마다 다르게 편한 크기로 고정 — 기기별이라 local, sync 대상 아님 ---
+const uiScaleSelect = document.getElementById("ui-scale");
+chrome.storage.local.get({ uiScale: 100 }, ({ uiScale }) => {
+  uiScaleSelect.value = uiScale;
+  document.body.style.zoom = `${uiScale}%`;
+});
+uiScaleSelect.addEventListener("change", () => {
+  const uiScale = Number(uiScaleSelect.value);
+  document.body.style.zoom = `${uiScale}%`;
+  chrome.storage.local.set({ uiScale });
+});
+
 // 저장 버튼 누르면 잠깐 "저장됨"으로 바뀌면서 통통 튀는 모션
 function flashSaved(btn) {
   const original = btn.textContent;
