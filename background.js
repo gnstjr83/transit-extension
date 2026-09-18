@@ -2,6 +2,14 @@ const ALARM_NAME = "transit-focus-end";
 const TIMEOUT_ALARM_NAME = "transit-retro-timeout";
 const NOTIF_ID = "transit-retro";
 const TIMEOUT_MIN = 10; // 이 시간 안에 예/아니오 응답 없으면 "예"로 간주
+const RETRO_LOG_MAX = 100; // sync 항목당 8KB 한도 안에 들어오게 최근 것만 유지
+
+// retroLog는 여러 기기에서 보이게 sync에 저장. 계속 쌓이기만 하면 8KB를 넘으니 최근 것만 유지.
+async function pushRetroEntry(entry) {
+  const { retroLog } = await chrome.storage.sync.get({ retroLog: [] });
+  const next = [...retroLog, entry].slice(-RETRO_LOG_MAX);
+  await chrome.storage.sync.set({ retroLog: next });
+}
 
 // --- 감시 사이트 동적 등록 ---
 // manifest.json엔 더 이상 content_scripts를 고정으로 안 박아두고, 옵션 페이지에서
@@ -96,10 +104,10 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
   if (alarm.name === TIMEOUT_ALARM_NAME) {
     // 응답했으면 focusSession이 이미 null로 지워져 있음 -> 무응답일 때만 "예"로 간주.
-    chrome.storage.local.get({ retroLog: [], focusSession: null }, ({ retroLog, focusSession }) => {
+    chrome.storage.local.get({ focusSession: null }, async ({ focusSession }) => {
       if (!focusSession) return;
-      retroLog.push({ taskTitle: focusSession.taskTitle ?? null, started: true, at: Date.now(), auto: true });
-      chrome.storage.local.set({ retroLog, focusSession: null });
+      await pushRetroEntry({ taskTitle: focusSession.taskTitle ?? null, started: true, at: Date.now(), auto: true });
+      chrome.storage.local.set({ focusSession: null });
       chrome.notifications.clear(NOTIF_ID);
     });
   }
@@ -109,13 +117,13 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 chrome.notifications.onButtonClicked.addListener((notifId, buttonIndex) => {
   if (notifId !== NOTIF_ID) return;
 
-  chrome.storage.local.get({ retroLog: [], focusSession: null }, ({ retroLog, focusSession }) => {
-    retroLog.push({
+  chrome.storage.local.get({ focusSession: null }, async ({ focusSession }) => {
+    await pushRetroEntry({
       taskTitle: focusSession?.taskTitle ?? null,
       started: buttonIndex === 0, // 0: 예, 1: 아니오
       at: Date.now(),
     });
-    chrome.storage.local.set({ retroLog, focusSession: null });
+    chrome.storage.local.set({ focusSession: null });
   });
   chrome.alarms.clear(TIMEOUT_ALARM_NAME);
   chrome.notifications.clear(notifId);

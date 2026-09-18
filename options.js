@@ -66,7 +66,7 @@ const retroSummaryEl = document.getElementById("retro-summary");
 const retroListEl = document.getElementById("retro-list");
 
 function renderRetroStats() {
-  chrome.storage.local.get({ retroLog: [] }, ({ retroLog }) => {
+  chrome.storage.sync.get({ retroLog: [] }, ({ retroLog }) => {
     if (retroLog.length === 0) {
       retroSummaryEl.innerHTML = `<div class="stat-sub">아직 기록 없음 — 알림에서 예/아니오를 누르면 쌓여요.</div>`;
       retroListEl.innerHTML = "";
@@ -100,12 +100,12 @@ function renderRetroStats() {
 }
 
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === "local" && changes.retroLog) renderRetroStats();
+  if (area === "sync" && changes.retroLog) renderRetroStats();
 });
 
 document.getElementById("clear-retro").addEventListener("click", () => {
   if (!confirm("전환 성공률 기록을 초기화할까요?")) return;
-  chrome.storage.local.remove("retroLog", renderRetroStats);
+  chrome.storage.sync.remove("retroLog", renderRetroStats);
 });
 
 renderRetroStats();
