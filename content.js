@@ -53,34 +53,16 @@ chrome.storage.sync.get({ thresholdSec: 1200 }, ({ thresholdSec }) => {
 // 진행중인 할 일이 있는데 유튜브 영상을 (새로 들어가서든, 다시 눌러서든) 재생시키면 살짝 찔러줌.
 // 'play' 이벤트는 버블링 안 해서 document에 캡처 단계로 걸어야 함 — 영상이 SPA로 바뀌어도 계속 잡힘.
 if (location.hostname.includes("youtube.com")) {
-  let lastNudgeAt = 0;
-  let lastVideoKey = null;
-  const NUDGE_COOLDOWN_MS = 30 * 1000; // 같은 영상에서 버퍼링 재개 등으로 play가 자주 뜨는 걸 방지
-
+  // 쿨다운 없음: 새 영상이든 같은 영상 재생 재시도든 play 때마다 매번 띄움.
   document.addEventListener(
     "play",
     async (e) => {
       if (e.target.tagName !== "VIDEO") return;
 
-      // 쇼츠 넘기는 것처럼 다른 영상으로 바뀐 거면 쿨다운 무시하고 매번 체크.
-      // 같은 영상 안에서 재생만 다시 누른 거면(버퍼링 재개 포함) 쿨다운 적용.
-      const videoKey = location.href;
-      const isNewVideo = videoKey !== lastVideoKey;
-      lastVideoKey = videoKey;
-      console.log("[Transit] play 이벤트 감지됨", { isNewVideo, videoKey });
-
-      if (!isNewVideo && Date.now() - lastNudgeAt < NUDGE_COOLDOWN_MS) {
-        console.log("[Transit] 같은 영상 쿨다운 중이라 스킵");
-        return;
-      }
-
       const { tasks } = await chrome.storage.sync.get({ tasks: [] });
       const task = selectRelevantTask(tasks);
       console.log("[Transit] nudge 후보 task:", task);
-      if (task?.status === "ongoing") {
-        lastNudgeAt = Date.now();
-        showNudge(task.title);
-      }
+      if (task?.status === "ongoing") showNudge(task.title);
     },
     true
   );
